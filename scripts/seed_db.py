@@ -25,7 +25,7 @@ async def get_lectures() -> List[Path]:
         print("[red]seed failed: `data/js-lectures` not found[/red]")
         sys.exit(1)
 
-    return list(path.glob("*.md"))
+    return path.glob("*.md")
 
 
 async def extract_metadata(filepath: Path) -> Tuple[int, str, str]:
