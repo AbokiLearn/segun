@@ -4,3 +4,4 @@ node_modueles/
 .env
 logs/
 data/
+.ruff_cache/
