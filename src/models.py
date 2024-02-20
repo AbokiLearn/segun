@@ -30,6 +30,13 @@ class Subject(MongoDocument):
 class Lecture(MongoDocument):
     idx: int
     title: str
-    subject: ObjectId
+    subject_id: ObjectId
     youtube: Optional[str] = None
     content: Any
+
+
+class LectureChunk(MongoDocument):
+    subject_id: ObjectId
+    lecture_id: ObjectId
+    chunk: str
+    embedding: List[float]
