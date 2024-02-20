@@ -15,7 +15,7 @@ import aiofiles
 
 sys.path.append("src")
 from models import Subject, Lecture, LectureChunk
-from llm import embed
+from llm import embed_async
 import mongo
 
 
@@ -79,8 +79,8 @@ async def process_lectures(db, lectures) -> Dict:
 
         subjects[subject]["lectures"].append(res_l.inserted_id)
         lecture_info[str(lecture)] = {
-            "subject": res_s.inserted_id,
-            "lecture": res_l.inserted_id,
+            "subject": str(res_s.inserted_id),
+            "lecture": str(res_l.inserted_id),
         }
 
     for subject, details in tqdm(
@@ -106,7 +106,7 @@ async def chunk_and_embed(db, lecture_info):
         chunks = [
             chk.text for chk in parser.get_nodes_from_documents(doc) if chk.text != ""
         ]
-        embeddings = embed(chunks)
+        embeddings = await embed_async(chunks)
 
         lecture_chunks = [
             LectureChunk(
