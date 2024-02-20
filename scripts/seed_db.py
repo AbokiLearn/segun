@@ -1,11 +1,10 @@
-#!/usr/bin/env .venv/bin/python
+# scripts/seed_db.py
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.server_api import ServerApi
 from rich import print
 from tqdm import tqdm
 import asyncio
-import pymongo
 
 from typing import Tuple, List
 from pathlib import Path
@@ -25,20 +24,21 @@ async def get_lectures() -> List[Path]:
         print("[red]seed failed: `data/js-lectures` not found[/red]")
         sys.exit(1)
 
-    return path.glob("*.md")
+    return sorted(path.glob("*.md"))
 
 
 async def extract_metadata(filepath: Path) -> Tuple[int, str, str]:
     filename = filepath.name
     pattern = r"(\d+)-\[(.*?)\]-(.*?)\.md"
     match = re.search(pattern, filename)
-    if match:
-        lectureNum = int(match.group(1))
-        subject = " ".join(match.group(2).split("-")).capitalize()
-        title = " ".join(match.group(3).split("-")).capitalize()
-        return lectureNum, subject, title
-    else:
+
+    if not match:
         raise ValueError(f"Filename {filename} does not match expected pattern.")
+
+    lecture_num, subject_raw, title_raw = match.groups()
+    subject = subject_raw.replace("-", " ").capitalize()
+    title = title_raw.replace("-", " ").capitalize()
+    return int(lecture_num), subject, title
 
 
 async def load_md_str(filepath: Path) -> str:
@@ -46,56 +46,50 @@ async def load_md_str(filepath: Path) -> str:
         return await file.read()
 
 
-async def main():
-    print(
-        "[green]seeding `abokicode_db:lectures` with content from `data/js-lectures`[/green]"
-    )
-
-    client = AsyncIOMotorClient(config.MONGO_URI, server_api=ServerApi("1"))
-    db = client["abokicode_db"]
-
+async def init_database(db):
     await db["subjects"].drop()
     await db["lectures"].drop()
-
     await db.create_collection("subjects")
     await db.create_collection("lectures")
     await db["subjects"].create_index([("title", 1)], unique=True)
     await db["lectures"].create_index([("idx", 1)], unique=True)
 
-    lectures = await get_lectures()
 
+async def process_lectures(db, lectures):
     subjects = {}
-    for lecture in tqdm(lectures, desc="seeding `subjects`"):
-        try:
-            _, subject, _ = await extract_metadata(lecture)
+
+    for lecture in tqdm(lectures, total=len(lectures), desc="seeding database"):
+        idx, subject, title = await extract_metadata(lecture)
+        content = await load_md_str(lecture)
+
+        if subject not in subjects:
             subject_document = Subject(title=subject, lectures=[]).dump("upload")
-            try:
-                result = await db["subjects"].insert_one(subject_document)
-                subjects[subject] = result.inserted_id
-            except pymongo.errors.DuplicateKeyError:
-                continue
-        except ValueError:
-            print(f"[red]Error encountered for {lecture}[red]")
+            result = await db["subjects"].insert_one(subject_document)
+            subjects[subject] = {"id": result.inserted_id, "lectures": []}
 
-    for lecture in tqdm(lectures, desc="seeding `lectures`"):
-        try:
-            idx, subject, title = await extract_metadata(lecture)
-            content = await load_md_str(lecture)
-            lecture_document = Lecture(
-                idx=idx, title=title, subject=subjects[subject], content=content
-            ).dump("upload")
+        lecture_document = Lecture(
+            idx=idx, title=title, subject=subjects[subject]["id"], content=content
+        ).dump("upload")
+        result = await db["lectures"].insert_one(lecture_document)
+        subjects[subject]["lectures"].append(result.inserted_id)
 
-            result = await db["lectures"].insert_one(lecture_document)
-            await db["subjects"].update_one(
-                {"_id": subjects[subject]}, {"$push": {"lectures": result.inserted_id}}
-            )
-        except ValueError:
-            print(f"[red]Error encountered for {lecture}[red]")
+    for subject, details in tqdm(
+        subjects.items(), total=len(subjects), desc="updating subjects"
+    ):
+        await db["subjects"].update_one(
+            {"_id": details["id"]}, {"$set": {"lectures": details["lectures"]}}
+        )
 
+
+async def main():
+    print("[green]starting database seeding...[/green]")
+    client = AsyncIOMotorClient(config.MONGO_URI, server_api=ServerApi("1"))
+    db = client["abokicode_db"]
+    await init_database(db)
+    lectures = await get_lectures()
+    await process_lectures(db, lectures)
     print("[green]done 😊[/green]")
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    loop.close()
+    asyncio.run(main())

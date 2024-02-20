@@ -25,6 +25,6 @@ To populate the database with some example documents for testing purposes:
 # download lecture content
 ./scripts/get_demo_lectures.sh
 
-# populate database with documents
-./scripts/seed_db.py
+# populate database with documents (must be in venv)
+python scripts/seed_db.py
 ```
