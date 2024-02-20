@@ -9,5 +9,5 @@ repos:
     rev: v0.1.7
     hooks:
       - id: ruff
-        args: [--fix]
+        args: [--fix, --ignore=E402]
       - id: ruff-format
