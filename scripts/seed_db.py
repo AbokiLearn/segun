@@ -54,8 +54,10 @@ async def load_md_str(filepath: Path) -> str:
 async def init_database(db):
     await db["subjects"].drop()
     await db["lectures"].drop()
+    await db["lecture_chunks"].drop()
     await db.create_collection("subjects")
     await db.create_collection("lectures")
+    await db.create_collection("lecture_chunks")
     await db["subjects"].create_index([("title", 1)], unique=True)
     await db["lectures"].create_index([("idx", 1)], unique=True)
 
