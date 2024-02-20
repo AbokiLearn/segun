@@ -3,3 +3,4 @@ node_modueles/
 .venv/
 .env
 logs/
+data/
