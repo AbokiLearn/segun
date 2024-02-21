@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     MONGO_URI: str
     EMBEDDING_MODEL: str
     EMBEDDING_DIM: int
+    TOGETHER_API_KEY: str
 
 
 config = Settings()
