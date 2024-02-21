@@ -32,9 +32,6 @@ client = wrap_openai(
 client = instructor.patch(client, mode=instructor.Mode.TOOLS)
 sem = asyncio.Semaphore(5)  # rate limit
 
-RESPONSE_MODEL = "gpt-3.5-turbo-0125"
-# RESPONSE_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-# RESPONSE_MODEL = "NousResearch/Nous-Hermes-2-Mixtral-8x7B-SFT"
 
 
 def embed(
@@ -166,7 +163,7 @@ async def extract_question(user_question: str) -> QuestionUnderstanding:
 
     async with sem:
         return user_question, await client.chat.completions.create(
-            model=RESPONSE_MODEL,
+            model=config.LLM,
             response_model=QuestionUnderstanding,
             max_retries=2,
             messages=[
@@ -185,7 +182,7 @@ async def determine_subject(question: QuestionUnderstanding) -> str:
 
     async with sem:
         return question, await client.chat.completions.create(
-            model=RESPONSE_MODEL,
+            model=config.LLM,
             response_model=QuestionSubject,
             max_retries=2,
             messages=[
@@ -233,7 +230,7 @@ async def answer_question(
 
     async with sem:
         return await client.chat.completions.create(
-            model=RESPONSE_MODEL,
+            model=config.LLM,
             response_model=AIAnswer,
             max_retries=2,
             messages=[

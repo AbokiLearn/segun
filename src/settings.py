@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str
     EMBEDDING_DIM: int
     TOGETHER_API_KEY: str
+    LLM: str
 
 
 config = Settings()
