@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field
 from bson import ObjectId
 
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 
 class MongoDocument(BaseModel):
@@ -40,6 +40,18 @@ class LectureChunk(MongoDocument):
     lecture_id: str
     chunk: str
     embedding: List[float]
+
+
+class RetrievedLecture(MongoDocument):
+    subject: str
+    subject_id: str
+    lecture: str
+    lecture_id: str
+    chunk: str
+    score: float
+
+    def __str__(self):
+        return f"Topic: {self.subject}\nLecture: {self.lecture}\n\n{self.chunk}"
 
 
 class AtlasVectorSearch(BaseModel):
@@ -86,3 +98,8 @@ class AtlasVectorSearch(BaseModel):
             pipeline[0]["$vectorSearch"]["filter"] = {"$or": filter_}
 
         return pipeline
+
+
+class Message(BaseModel):
+    content: str
+    role: Literal["user", "system", "assistant"]
