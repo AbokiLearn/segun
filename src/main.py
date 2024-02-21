@@ -1,38 +1,42 @@
-# bot/main.py
+# src/main.py
 
 from telegram import (
-    InlineQueryResultArticle,
-    InputTextMessageContent,
     Update,
-    ForceReply,
+    ReactionTypeEmoji,
 )
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
     filters,
-    InlineQueryHandler,
-    MessageHandler
+    MessageHandler,
 )
 import asyncio
 
 from loguru import logger
-from rich import print, inspect
 
 from pathlib import Path
 
-from settings import config, TMP_DIR
-import utils
+from settings import config
+import mongo
+import llm
 
 
 path = Path(__file__).parent.parent
 
 logger.add(
-    sink=path/'logs'/'bot.log',
+    sink=path / "logs" / "bot.log",
     format="{time:MMMM D, YYYY > HH:mm:ss!UTC} | {level} | {message}",
     colorize=True,
     level="INFO",
 )
+
+client, db = mongo.connect()
+
+
+async def fetch_subjects():
+    subjects = await mongo.get_subjects(db)
+    return subjects
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -46,119 +50,71 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Echo the user message."""
-    
-    logger.info(f"User {update.effective_user.id} sent message: {update.message.text}")
+async def question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Perform RAG to answer user question"""
 
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=update.message.text,
-    )
+    global subjects
 
-
-async def audio_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle voice messages or audio files from user."""
-    
-    audio_file = update.message.audio or update.message.voice
-
-    if not audio_file:
-        return
-        
-    file_size = audio_file.file_size / 1024 / 1024
-    duration = audio_file.duration / 60
     logger.info(
-        f"Received audio: '{file_size:.2f} mb'\t'{duration:.2f} minutes'"
+        f"User {update.effective_user.id} asked a question. Responding with LLM."
+    )
+    user_message = " ".join(context.args)
+
+    bot_message = await context.bot.send_message(
+        chat_id=update.effective_chat.id, text="Working on it..."
     )
 
-    message = await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Let me transcribe that for you! This may take a while..."
+    logger.info("Asking Mixtral")
+    _, res_q = await llm.extract_question(user_message)
+    _, res_s = await llm.determine_subject(res_q.question)
+
+    context_docs = await mongo.vector_search(
+        db,
+        query=res_q.question,
+        subject_ids=[str(subjects[title.value]) for title in res_s.subjects],
     )
 
-    logger.info(f"Downloading voice message from user {update.effective_user.id}")
-    file = await audio_file.get_file()
-    file_path = await file.download_to_drive(
-        custom_path=utils.create_tmpfile(file)
-    )
-    
-    call_id = await utils.submit_transcription_job(file_path)
-    logger.info(f"Submitted transcription job for user {update.effective_user.id} with call_id {call_id}")
-   
-    asyncio.create_task(
-        utils.check_job_status(call_id, update.effective_chat.id, message.message_id, context.bot)
-    ) 
-    
+    ai_answer = await llm.answer_question(res_q.question, context_docs)
 
-async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reply with caps the user message."""
-   
-    logger.info(f"User {update.effective_user.id} sent command: {update.message.text}")
-    
-    text_caps = ' '.join(context.args).upper()
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text_caps,
+    answer = f"{ai_answer.answer}\n\n" + "\n".join(
+        [f"- {x}" for x in ai_answer.sources]
     )
 
-
-async def inline_caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reply with caps the inline user query."""
-
-    query = update.inline_query.query
-    if not query:
-        return
-    
-    logger.info(f"User {update.effective_user.id} sent inline query: {query}")
-
-    results = [
-        InlineQueryResultArticle(
-            id=query.upper(),
-            title='Caps',
-            input_message_content=InputTextMessageContent(query.upper()),
-        )
-    ]
-    await context.bot.answer_inline_query(update.inline_query.id, results)
-
-
-async def transcribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Transcribe audio files from the user"""
-    await update.message.reply_text(
-        'Please send the audio file you want to transcribe.',
-        reply_markup=ForceReply(selective=True),
+    await bot_message.edit_text(text=answer)
+    await bot_message.chat.set_message_reaction(
+        message_id=bot_message.message_id, reaction=ReactionTypeEmoji("👍")
     )
 
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Reply with unknown command message."""
-    
-    logger.info(f"User {update.effective_user.id} sent unknown command: {update.message.text}")
-     
+
+    logger.info(
+        f"User {update.effective_user.id} sent unknown command: {update.message.text}"
+    )
+
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Sorry, I didn't understand that command.",
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = ApplicationBuilder().token(config.TELEGRAM_TOKEN).build()
-    
-    start_handler = CommandHandler('start', start)
-    caps_handler = CommandHandler('caps', caps)
-    transcribe_handler = CommandHandler('transcribe', transcribe_command)
-    echo_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), echo)
-    audio_handler = MessageHandler(filters.VOICE | filters.AUDIO, audio_handler)
-    unknown_handler = MessageHandler(filters.COMMAND, unknown)
-    inline_caps_handler = InlineQueryHandler(inline_caps)
 
-    app.add_handler(start_handler)    
-    app.add_handler(echo_handler)
-    app.add_handler(transcribe_handler)
-    app.add_handler(audio_handler)
-    app.add_handler(caps_handler)
-    app.add_handler(inline_caps_handler)
+    loop = asyncio.get_event_loop()
+    subjects = {
+        str(r["title"]): r["_id"] for r in loop.run_until_complete(fetch_subjects())
+    }
+
+    start_handler = CommandHandler("start", start)
+    question_handler = CommandHandler("question", question)
+    unknown_handler = MessageHandler(filters.COMMAND, unknown)
+
+    app.add_handler(start_handler)
+    app.add_handler(question_handler)
     app.add_handler(unknown_handler)  # must be last
-   
-    logger.info("Bot started") 
+
+    logger.info("Bot started")
     app.run_polling()
     logger.info("Bot stopped. Goodbye!")
