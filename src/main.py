@@ -3,6 +3,8 @@
 from telegram import (
     Update,
     ReactionTypeEmoji,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -10,6 +12,8 @@ from telegram.ext import (
     CommandHandler,
     filters,
     MessageHandler,
+    ConversationHandler,
+    CallbackQueryHandler,
 )
 import asyncio
 
@@ -21,6 +25,7 @@ from settings import config
 import mongo
 import llm
 
+CONFIGURE_ASK, CONFIGURE_CONTENT = range(2)
 
 path = Path(__file__).parent.parent
 
@@ -46,7 +51,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Hello, I'm a bot!",
+        text="""\
+Hello I'm Aboki, an AI chatbot.
+
+I can answer any questions you have about this course.
+""",
     )
 
 
@@ -86,6 +95,64 @@ async def question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def configure(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_name = update.effective_user.first_name or "there"
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"Hello {user_name}, have you already set up the course on AbokiLearn? (Yes/No)",
+    )
+    return CONFIGURE_ASK
+
+
+async def configure_ask(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_response = update.message.text.lower()
+    if user_response in ["yes", "y"]:
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "JavaScript Bootcamp", callback_data="JavaScript Bootcamp"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "Intro to Chemistry", callback_data="Intro to Chemistry"
+                )
+            ],
+            [InlineKeyboardButton("Mathematics", callback_data="Mathematics")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Which content do you want the bot to have access to?",
+            reply_markup=reply_markup,
+        )
+        return CONFIGURE_CONTENT
+    else:
+        raise Exception("User has not configured the course in the web app.")
+
+
+async def configure_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    content_choice = query.data
+    await query.edit_message_text(
+        text=f"Okay, the bot now has access to your content library: {content_choice}."
+    )
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Setup was successful!",
+    )
+    return ConversationHandler.END
+
+
+async def configure_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Configuration cancelled.",
+    )
+    return ConversationHandler.END
+
+
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Reply with unknown command message."""
 
@@ -109,10 +176,21 @@ if __name__ == "__main__":
 
     start_handler = CommandHandler("start", start)
     question_handler = CommandHandler("question", question)
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler("configure", configure)],
+        states={
+            CONFIGURE_ASK: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, configure_ask)
+            ],
+            CONFIGURE_CONTENT: [CallbackQueryHandler(configure_content)],
+        },
+        fallbacks=[CommandHandler("cancel", configure_cancel)],
+    )
     unknown_handler = MessageHandler(filters.COMMAND, unknown)
 
     app.add_handler(start_handler)
     app.add_handler(question_handler)
+    app.add_handler(conversation_handler)
     app.add_handler(unknown_handler)  # must be last
 
     logger.info("Bot started")

@@ -33,7 +33,6 @@ client = instructor.patch(client, mode=instructor.Mode.TOOLS)
 sem = asyncio.Semaphore(5)  # rate limit
 
 
-
 def embed(
     texts: List[str] | str, batch_size: int = 64
 ) -> List[List[float]] | List[float]:
@@ -196,7 +195,7 @@ async def determine_subject(question: QuestionUnderstanding) -> str:
 
 
 class AIAnswer(BaseModel):
-    """The answer to a user's question based solely on the provided context."""
+    """The answer to a user's question. If the context documents provided are relevant, use them to guide your answer. If they are not relevant to the question, ignore them and do not mention them in the answer."""
 
     chain_of_thought: str = Field(
         ..., description="The chain of thought that led to this classification."
