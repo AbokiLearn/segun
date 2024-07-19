@@ -5,3 +5,4 @@ node_modueles/
 logs/
 data/
 .ruff_cache/
+.logfire/
