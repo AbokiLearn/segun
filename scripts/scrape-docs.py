@@ -9,7 +9,7 @@ from pathlib import Path
 import time
 import os
 
-data_path = Path("/mnt/arrakis/AbokiLearn/aboki-segun/data")
+data_path = Path("/mnt/arrakis/AbokiLearn/aboki-segun/data/raw")
 logfire.configure(token=os.getenv("LOGFIRE_TOKEN", ""), console=False)
 
 
