@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Security, status
+from fastapi.security import APIKeyHeader
 
 from common.schema import TelegramMessage, InviteRequest, APIResponse
 from common.logging import get_api_logger
+from common.config import settings
 from common.bot import get_bot
 
 
@@ -9,9 +11,21 @@ app = FastAPI()
 bot = get_bot()
 logger = get_api_logger(app)
 
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
-@app.post("/send_message", response_model=APIResponse, status_code=status.HTTP_200_OK)
-async def send_message(message: TelegramMessage):
+
+def get_api_key(api_key: str = Security(api_key_header)):
+    if api_key == settings.API_KEY:
+        return api_key
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+        )
+
+
+@app.post("/send-message", response_model=APIResponse, status_code=status.HTTP_200_OK)
+async def send_message(message: TelegramMessage, api_key: str = Depends(get_api_key)):
     try:
         logger.info(
             "Sending message to {chat_id=}",
@@ -28,7 +42,7 @@ async def send_message(message: TelegramMessage):
 
 
 @app.post("/send-invite", response_model=APIResponse, status_code=status.HTTP_200_OK)
-async def send_invite(invite: InviteRequest):
+async def send_invite(invite: InviteRequest, api_key: str = Depends(get_api_key)):
     try:
         chat_invite_link = await bot.create_chat_invite_link(chat_id=invite.chat_id)
         invite_message = (

@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    API_KEY: str
     BOT_AT: str
     BOT_URL: str
     LOGFIRE_LEVEL: str
