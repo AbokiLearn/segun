@@ -23,6 +23,14 @@ jobs:
           cd /app/telegram-server/
           source .venv/bin/activate
           uv pip install -r requirements.txt
+
+          echo "API_KEY=${{ secrets.API_KEY }}" > .env
+          echo "BOT_AT=${{ secrets.BOT_AT }}" >> .env
+          echo "BOT_URL=${{ secrets.BOT_URL }}" >> .env
+          echo "LOGFIRE_LEVEL=${{ secrets.LOGFIRE_LEVEL }}" >> .env
+          echo "LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}" >> .env
+          echo "TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
+
           pm2 reload aws/ecosystem.config.js --update-env
         '
 
