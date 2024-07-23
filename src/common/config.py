@@ -2,6 +2,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    BOT_AT: str
+    BOT_URL: str
+    LOGFIRE_LEVEL: str
     LOGFIRE_TOKEN: str
     MONGO_DB: str
     MONGO_URI: str
