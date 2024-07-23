@@ -25,15 +25,15 @@ jobs:
           source .venv/bin/activate
           /home/ubuntu/.cargo/bin/uv pip install -r requirements.txt
 
-          echo "API_KEY=${{ secrets.API_KEY }}" > .env
-          echo "BOT_AT=${{ secrets.BOT_AT }}" >> .env
-          echo "BOT_URL=${{ secrets.BOT_URL }}" >> .env
-          echo "LOGFIRE_LEVEL=${{ secrets.LOGFIRE_LEVEL }}" >> .env
-          echo "LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}" >> .env
-          echo "MONGO_DB=" >> .env
-          echo "MONGO_URI=" >> .env
-          echo "OPENAI_API_KEY=" >> .env
-          echo "TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
+          echo "export API_KEY=${{ secrets.API_KEY }}" > .env
+          echo "export BOT_AT=${{ secrets.BOT_AT }}" >> .env
+          echo "export BOT_URL=${{ secrets.BOT_URL }}" >> .env
+          echo "export LOGFIRE_LEVEL=${{ secrets.LOGFIRE_LEVEL }}" >> .env
+          echo "export LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}" >> .env
+          echo "export MONGO_DB=" >> .env
+          echo "export MONGO_URI=" >> .env
+          echo "export OPENAI_API_KEY=" >> .env
+          echo "export TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
 
           pm2 reload aws/ecosystem.config.js --update-env
         '
