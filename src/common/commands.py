@@ -20,9 +20,9 @@ class ChatData:
 
 def _get_chat_data(update: Update) -> ChatData:
     return ChatData(
-        user_id=update.message.from_user.id,
-        chat_id=update.effective_chat.id,
-        text=update.message.text,
+        user_id=update.effective_user.id if update.effective_user else None,
+        chat_id=update.effective_chat.id if update.effective_chat else None,
+        text=update.effective_message.text if update.effective_message else None,
     )
 
 

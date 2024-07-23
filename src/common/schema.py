@@ -7,8 +7,8 @@ class TelegramMessage(BaseModel):
 
 
 class InviteRequest(BaseModel):
-    user_id: str = Field(..., description="The user ID to invite")
     chat_id: str = Field(..., description="The chat ID (group/channel)")
+    user_id: str = Field(..., description="The user ID to invite")
     message: str = Field(..., description="The message to send")
 
 
