@@ -2,23 +2,17 @@ from telegram.ext import ContextTypes, ConversationHandler
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram import error as tg_error
 
-from dataclasses import dataclass
 from enum import Enum
 
 from common.logging import bot_logger
 from common.config import settings
-
-
-@dataclass
-class ChatData:
-    user_id: int
-    chat_id: int
-    text: str | None = None
+from common.schema import ChatData
+from common import web_client
 
 
 def _get_chat_data(update: Update) -> ChatData:
     return ChatData(
-        user_id=update.effective_user.id if update.effective_user else None,
+        user=update.effective_user,
         chat_id=update.effective_chat.id if update.effective_chat else None,
         text=update.effective_message.text if update.effective_message else None,
     )
@@ -31,7 +25,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
     bot_logger.debug(
-        "Bot started: {user_id=}", user_id=chat_data.user_id, chat_id=chat_data.chat_id
+        "Bot started: {user_id=}", user_id=chat_data.user.id, chat_id=chat_data.chat_id
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text="Hello, I'm a bot!")
 
@@ -42,7 +36,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_logger.debug(
         "Received message: {text=}",
         text=chat_data.text,
-        user_id=chat_data.user_id,
+        user_id=chat_data.user.id,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
@@ -64,7 +58,7 @@ For any issues or questions, please contact support.
 
     bot_logger.debug(
         "Help command requested: {user_id=}",
-        user_id=chat_data.user_id,
+        user_id=chat_data.user.id,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text=help_text)
@@ -76,7 +70,7 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_logger.debug(
         "Unknown command: {text=}",
         text=chat_data.text,
-        user_id=chat_data.user_id,
+        user_id=chat_data.user.id,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
@@ -105,7 +99,7 @@ async def register_user(
     try:
         bot_logger.debug(
             "Sending registration message: {user_id=}",
-            user_id=chat_data.user_id,
+            user_id=chat_data.user.id,
             chat_id=chat_data.chat_id,
         )
         await update.message.reply_text(
@@ -128,7 +122,7 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
             bot_logger.error(
                 "Error responding to registration command: {error=}",
                 error=str(e),
-                user_id=chat_data.user_id,
+                user_id=chat_data.user.id,
                 chat_id=chat_data.chat_id,
             )
 
@@ -138,18 +132,27 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
 async def receive_phone(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> RegistrationStates:
-    user = update.message.from_user
+    chat_data = _get_chat_data(update)
     phone_number = update.message.contact.phone_number
+
+    await update.message.reply_text("Thank you! Please wait...")
+
+    res = await web_client.register_user(phone_number, chat_data.user.id)
+
+    if res.error:
+        await update.message.reply_text(
+            f"An error occurred while registering your telegram account: {res.error}",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return ConversationHandler.END
 
     bot_logger.debug(
         "Received phone number: {user_id=}",
         phone_number=phone_number,
-        user_id=user.id,
-        chat_id=update.effective_chat.id,
+        user_id=chat_data.user.id,
+        chat_id=chat_data.chat_id,
     )
-    await update.message.reply_text(
-        f"Thank you, {user.full_name}! Your telegram account has been registered successfully."
-    )
+    await update.message.reply_text(res.message, reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 

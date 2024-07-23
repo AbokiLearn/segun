@@ -1,4 +1,14 @@
 from pydantic import BaseModel, Field
+from telegram import User
+
+
+class ChatData(BaseModel):
+    user: User
+    chat_id: int
+    text: str | None = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class TelegramMessage(BaseModel):
