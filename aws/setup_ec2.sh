@@ -22,6 +22,9 @@ sudo mkdir -p /app/telegram-server
 sudo chown -R $USER:$USER /app/telegram-server
 cd /app/telegram-server
 
+# create venv
+/home/ubuntu/.cargo/bin/uv venv
+
 # configure nginx
 sudo tee /etc/nginx/sites-available/telegram-api << EOF
 server {

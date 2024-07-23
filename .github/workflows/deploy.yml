@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -22,7 +23,7 @@ jobs:
         ssh -i private_key -o StrictHostKeyChecking=no ${USER}@${HOST} '
           cd /app/telegram-server/
           source .venv/bin/activate
-          uv pip install -r requirements.txt
+          /home/ubuntu/.cargo/bin/uv pip install -r requirements.txt
 
           echo "API_KEY=${{ secrets.API_KEY }}" > .env
           echo "BOT_AT=${{ secrets.BOT_AT }}" >> .env
