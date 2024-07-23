@@ -1,7 +1,7 @@
 __pycache__/
 node_modueles/
 .venv/
-.env
+.env*
 logs/
 data/
 .ruff_cache/
