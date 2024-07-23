@@ -12,5 +12,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     TELEGRAM_TOKEN: str
 
+    class Config:
+        env_file = ".env"
+
 
 settings = Settings()
