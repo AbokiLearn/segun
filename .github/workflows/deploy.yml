@@ -25,7 +25,6 @@ jobs:
           source .venv/bin/activate
           /home/ubuntu/.cargo/bin/uv pip install -r requirements.txt
 
-          echo "export API_DOMAIN=${{ secrets.API_DOMAIN }}" > .env
           echo "export API_KEY=${{ secrets.API_KEY }}" >> .env
           echo "export BOT_AT=${{ secrets.BOT_AT }}" >> .env
           echo "export BOT_URL=${{ secrets.BOT_URL }}" >> .env

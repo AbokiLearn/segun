@@ -48,11 +48,7 @@ sudo nginx -t
 sudo systemctl restart nginx
 
 # get cert
-# sudo certbot --nginx \
-#     -d telegram-api.wazobiacode.com \
-#     --non-interactive \
-#     --agree-tos \
-#     -m wazobiacode@gmail.com
+# sudo certbot --nginx -d telegram-api.wazobiacode.com
 # echo "0 0 1 * * /usr/bin/certbot renew --quiet" | sudo tee -a /etc/crontab > /dev/null
 
 echo "Initial setup complete. The CI/CD pipeline will handle deployments."

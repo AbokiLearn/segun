@@ -7,7 +7,7 @@ from common.config import settings
 from common.bot import get_bot
 
 
-app = FastAPI(root_path=settings.API_DOMAIN)
+app = FastAPI()
 bot = get_bot()
 logger = get_api_logger(app)
 

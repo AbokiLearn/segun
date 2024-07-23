@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    API_DOMAIN: str
     API_KEY: str
     BOT_AT: str
     BOT_URL: str
