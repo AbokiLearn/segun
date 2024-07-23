@@ -11,9 +11,12 @@ PORT=8000
 WORKERS=2
 MODE="production"
 
-load_venv() {
+load_env() {
   if [ -f "$PARENT_DIR/.venv/bin/activate" ]; then
     source "$PARENT_DIR/.venv/bin/activate"
+  fi
+  if [ -f "$PARENT_DIR/.env" ]; then
+    source "$PARENT_DIR/.env"
   fi
 }
 
@@ -59,5 +62,5 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-load_venv
+load_env
 run_server
