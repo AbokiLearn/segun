@@ -17,6 +17,10 @@ sudo npm install -g pm2
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
 
+# set python version
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+sudo update-alternatives --set python3 /usr/bin/python3.11
+
 # create project dir
 sudo mkdir -p /app/telegram-server
 sudo chown -R $USER:$USER /app/telegram-server
@@ -29,7 +33,7 @@ cd /app/telegram-server
 sudo tee /etc/nginx/sites-available/telegram-api << EOF
 server {
     listen 80;
-    server_name telegram-server.wazobiacode.com;
+    server_name telegram-api.wazobiacode.com;
 
     location / {
         proxy_pass http://localhost:8000;
