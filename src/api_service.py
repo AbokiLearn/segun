@@ -53,3 +53,8 @@ async def send_invite(invite: InviteRequest, api_key: str = Depends(get_api_key)
     except Exception as e:
         logger.error("Error sending invite: {error=}", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/health", status_code=status.HTTP_200_OK)
+async def health():
+    return {"status": "ok"}

@@ -12,10 +12,10 @@ from common.commands import (
     unknown,
     RegistrationStates,
 )
-from common.logging import get_bot_logger
+from common.logging import bot_logger
 from common.bot import get_application
 
-logger = get_bot_logger()
+# logger = get_bot_logger()
 
 
 def main():
@@ -43,10 +43,10 @@ def main():
     app.add_handler(unknown_handler)
 
     start_time = strftime("%Y%m%d_%H:%M:%S")
-    with logger.span(f"bot started at {start_time}"):
+    with bot_logger.span(f"bot started at {start_time}"):
         app.run_polling()
         end_time = strftime("%Y%m%d_%H:%M:%S")
-        logger.info(f"bot stopped at {end_time}")
+        bot_logger.info(f"bot stopped at {end_time}")
 
 
 if __name__ == "__main__":

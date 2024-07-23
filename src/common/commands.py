@@ -5,10 +5,8 @@ from telegram import error as tg_error
 from dataclasses import dataclass
 from enum import Enum
 
-from common.logging import get_bot_logger
+from common.logging import bot_logger
 from common.config import settings
-
-logger = get_bot_logger()
 
 
 @dataclass
@@ -32,7 +30,7 @@ def _get_chat_data(update: Update) -> ChatData:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
-    logger.debug(
+    bot_logger.debug(
         "Bot started: {user_id=}", user_id=chat_data.user_id, chat_id=chat_data.chat_id
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text="Hello, I'm a bot!")
@@ -41,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
-    logger.debug(
+    bot_logger.debug(
         "Received message: {text=}",
         text=chat_data.text,
         user_id=chat_data.user_id,
@@ -64,7 +62,7 @@ Available commands:
 For any issues or questions, please contact support.
     """
 
-    logger.debug(
+    bot_logger.debug(
         "Help command requested: {user_id=}",
         user_id=chat_data.user_id,
         chat_id=chat_data.chat_id,
@@ -75,7 +73,7 @@ For any issues or questions, please contact support.
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
-    logger.debug(
+    bot_logger.debug(
         "Unknown command: {text=}",
         text=chat_data.text,
         user_id=chat_data.user_id,
@@ -105,7 +103,7 @@ async def register_user(
     # TODO: need to talk to website API, handle errors, already registered, etc.
 
     try:
-        logger.debug(
+        bot_logger.debug(
             "Sending registration message: {user_id=}",
             user_id=chat_data.user_id,
             chat_id=chat_data.chat_id,
@@ -127,7 +125,7 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
                 parse_mode="HTML",
             )
         else:
-            logger.error(
+            bot_logger.error(
                 "Error responding to registration command: {error=}",
                 error=str(e),
                 user_id=chat_data.user_id,
@@ -143,7 +141,7 @@ async def receive_phone(
     user = update.message.from_user
     phone_number = update.message.contact.phone_number
 
-    logger.debug(
+    bot_logger.debug(
         "Received phone number: {user_id=}",
         phone_number=phone_number,
         user_id=user.id,
@@ -159,7 +157,7 @@ async def receive_phone(
 async def cancel_registration(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> RegistrationStates:
-    logger.debug(
+    bot_logger.debug(
         "Cancelling registration: {user_id=}",
         user_id=update.message.from_user.id,
         chat_id=update.effective_chat.id,
