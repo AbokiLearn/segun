@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$SCRIPT_DIR"
 
 MAIN_SCRIPT="api_service:app"
@@ -10,6 +11,14 @@ PORT=8000
 WORKERS=2
 MODE="production"
 
+load_env() {
+  if [ -f "$PARENT_DIR/.venv/bin/activate" ]; then
+    source "$PARENT_DIR/.venv/bin/activate"
+  fi
+  if [ -f "$PARENT_DIR/.env" ]; then
+    source "$PARENT_DIR/.env"
+  fi
+}
 
 run_server() {
   if ! command -v uvicorn &> /dev/null; then
@@ -53,4 +62,5 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+load_env
 run_server

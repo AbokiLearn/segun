@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     MONGO_URI: str
     OPENAI_API_KEY: str
     TELEGRAM_TOKEN: str
+    WEB_API_KEY: str
+    WEB_API_URL: str
 
 
 settings = Settings()
