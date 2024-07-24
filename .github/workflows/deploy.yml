@@ -34,6 +34,9 @@ jobs:
           echo "export MONGO_URI=" >> .env
           echo "export OPENAI_API_KEY=" >> .env
           echo "export TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
+          echo "export WEB_API_KEY=${{ secrets.WEB_API_KEY }}" >> .env
+          echo "export WEB_API_URL=${{ secrets.WEB_API_URL }}" >> .env
+          echo "export WEB_ORIGIN=${{ secrets.WEB_ORIGIN }}" >> .env
 
           pm2 reload aws/ecosystem.config.js --update-env
         '
