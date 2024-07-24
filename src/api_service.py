@@ -57,7 +57,6 @@ async def send_invites(invite_batch: InviteBatch, api_key: str = Depends(get_api
     async def process_invite(invite):
         async with semaphore:
             try:
-                print(invite)
                 chat_invite_link = await bot.create_chat_invite_link(
                     chat_id=invite.chat_id
                 )
