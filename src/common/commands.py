@@ -94,8 +94,6 @@ async def register_user(
     keyboard = [[KeyboardButton("Share Phone Number", request_contact=True)]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
-    # TODO: need to talk to website API, handle errors, already registered, etc.
-
     try:
         bot_logger.debug(
             "Sending registration message: {user_id=}",
