@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
-from telegram import User
 
 
 class ChatData(BaseModel):
-    user: User
-    chat_id: int
+    sender: int
+    sent_by: str
+    chat_id: int | None = None
     text: str | None = None
 
     class Config:

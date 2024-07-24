@@ -1,18 +1,35 @@
-from telegram.ext import ContextTypes, ConversationHandler
-from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
-from telegram import error as tg_error
-
 from enum import Enum
 
-from common.logging import bot_logger
-from common.config import settings
-from common.schema import ChatData
+from telegram import (
+    Chat,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+    User,
+)
+from telegram import error as tg_error
+from telegram.ext import ContextTypes, ConversationHandler
+
 from common import web_client
+from common.config import settings
+from common.logging import bot_logger
+from common.schema import ChatData
 
 
 def _get_chat_data(update: Update) -> ChatData:
+    sender = update.effective_sender
+
+    if isinstance(sender, User):
+        sent_by = "user"
+    elif isinstance(sender, Chat):
+        sent_by = "channel"
+    else:
+        sent_by = "unknown"
+
     return ChatData(
-        user=update.effective_user,
+        sender=sender.id,
+        sent_by=sent_by,
         chat_id=update.effective_chat.id if update.effective_chat else None,
         text=update.effective_message.text if update.effective_message else None,
     )
@@ -25,7 +42,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
     bot_logger.debug(
-        "Bot started: {user_id=}", user_id=chat_data.user.id, chat_id=chat_data.chat_id
+        "Bot started: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
+        chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text="Hello, I'm a bot!")
 
@@ -36,7 +56,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_logger.debug(
         "Received message: {text=}",
         text=chat_data.text,
-        user_id=chat_data.user.id,
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
@@ -57,8 +78,9 @@ For any issues or questions, please contact support.
     """
 
     bot_logger.debug(
-        "Help command requested: {user_id=}",
-        user_id=chat_data.user.id,
+        "Help command requested: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text=help_text)
@@ -70,7 +92,8 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_logger.debug(
         "Unknown command: {text=}",
         text=chat_data.text,
-        user_id=chat_data.user.id,
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
@@ -96,8 +119,9 @@ async def register_user(
 
     try:
         bot_logger.debug(
-            "Sending registration message: {user_id=}",
-            user_id=chat_data.user.id,
+            "Sending registration message: {sender=}",
+            sender=chat_data.sender,
+            sent_by=chat_data.sent_by,
             chat_id=chat_data.chat_id,
         )
         await update.message.reply_text(
@@ -120,7 +144,8 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
             bot_logger.error(
                 "Error responding to registration command: {error=}",
                 error=str(e),
-                user_id=chat_data.user.id,
+                sender=chat_data.sender,
+                sent_by=chat_data.sent_by,
                 chat_id=chat_data.chat_id,
             )
 
@@ -135,7 +160,7 @@ async def receive_phone(
 
     await update.message.reply_text("Thank you! Please wait...")
 
-    res = await web_client.register_user(phone_number, chat_data.user.id)
+    res = await web_client.register_user(phone_number, chat_data.sender)
 
     if res.error:
         await update.message.reply_text(
@@ -145,9 +170,10 @@ async def receive_phone(
         return ConversationHandler.END
 
     bot_logger.debug(
-        "Received phone number: {user_id=}",
+        "Received phone number: {sender=}",
         phone_number=phone_number,
-        user_id=chat_data.user.id,
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await update.message.reply_text(res.message, reply_markup=ReplyKeyboardRemove())
@@ -158,10 +184,13 @@ async def receive_phone(
 async def cancel_registration(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> RegistrationStates:
+    chat_data = _get_chat_data(update)
+
     bot_logger.debug(
-        "Cancelling registration: {user_id=}",
-        user_id=update.message.from_user.id,
-        chat_id=update.effective_chat.id,
+        "Cancelling registration: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
+        chat_id=chat_data.chat_id,
     )
     await update.message.reply_text(
         "Registration cancelled. You can start over by using the /register command.",
