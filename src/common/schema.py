@@ -18,8 +18,12 @@ class TelegramMessage(BaseModel):
 
 class InviteRequest(BaseModel):
     chat_id: str = Field(..., description="The chat ID (group/channel)")
-    user_id: str = Field(..., description="The user ID to invite")
+    user_ids: list[str] = Field(..., description="A list of user IDs to invite")
     message: str = Field(..., description="The message to send")
+
+
+class InviteBatch(BaseModel):
+    invites: list[InviteRequest] = Field(..., description="A list of invites to send")
 
 
 class APIResponse(BaseModel):
