@@ -13,6 +13,8 @@ def get_endpoint(endpoint: str):
 
 
 async def register_user(phone_number: str, telegram_user_id: str):
+    if not phone_number.startswith("+"):
+        phone_number = f"+{phone_number}"
     async with httpx.AsyncClient() as client:
         response = await client.post(
             get_endpoint("auth/register-telegram"),
