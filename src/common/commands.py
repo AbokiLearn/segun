@@ -47,21 +47,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
-    await context.bot.send_message(chat_id=chat_data.chat_id, text="Hello, I'm a bot!")
-
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_data = _get_chat_data(update)
-
-    bot_logger.debug(
-        "Received message: {text=}",
-        text=chat_data.text,
-        sender=chat_data.sender,
-        sent_by=chat_data.sent_by,
-        chat_id=chat_data.chat_id,
-    )
     await context.bot.send_message(
-        chat_id=chat_data.chat_id, text=f"you said: '{chat_data.text}'"
+        chat_id=chat_data.chat_id,
+        text="Welcome to the WazobiaCode Bootcamp Bot! I'm here to assist you with your registration and provide access to course materials. To get started, use /register to link your Telegram account. If you need any help, just type /help for a list of available commands.",
     )
 
 

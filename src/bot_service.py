@@ -4,7 +4,6 @@ from time import strftime
 
 from common.commands import (
     cancel_registration,
-    handle_message,
     help,
     receive_phone,
     register_user,
@@ -15,17 +14,12 @@ from common.commands import (
 from common.logging import bot_logger
 from common.bot import get_application
 
-# logger = get_bot_logger()
-
 
 def main():
     app = get_application()
 
     start_handler = CommandHandler("start", start)
     app.add_handler(start_handler)
-
-    message_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    app.add_handler(message_handler)
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("register", register_user)],
