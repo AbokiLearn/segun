@@ -1,26 +1,35 @@
-from telegram.ext import ContextTypes, ConversationHandler
-from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
-from telegram import error as tg_error
-
-from dataclasses import dataclass
 from enum import Enum
 
-from common.logging import get_bot_logger
+from telegram import (
+    Chat,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+    User,
+)
+from telegram import error as tg_error
+from telegram.ext import ContextTypes, ConversationHandler
+
+from common import web_client
 from common.config import settings
-
-logger = get_bot_logger()
-
-
-@dataclass
-class ChatData:
-    user_id: int
-    chat_id: int
-    text: str | None = None
+from common.logging import bot_logger
+from common.schema import ChatData
 
 
 def _get_chat_data(update: Update) -> ChatData:
+    sender = update.effective_sender
+
+    if isinstance(sender, User):
+        sent_by = "user"
+    elif isinstance(sender, Chat):
+        sent_by = "channel"
+    else:
+        sent_by = "unknown"
+
     return ChatData(
-        user_id=update.effective_user.id if update.effective_user else None,
+        sender=sender.id,
+        sent_by=sent_by,
         chat_id=update.effective_chat.id if update.effective_chat else None,
         text=update.effective_message.text if update.effective_message else None,
     )
@@ -32,23 +41,15 @@ def _get_chat_data(update: Update) -> ChatData:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
-    logger.debug(
-        "Bot started: {user_id=}", user_id=chat_data.user_id, chat_id=chat_data.chat_id
-    )
-    await context.bot.send_message(chat_id=chat_data.chat_id, text="Hello, I'm a bot!")
-
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_data = _get_chat_data(update)
-
-    logger.debug(
-        "Received message: {text=}",
-        text=chat_data.text,
-        user_id=chat_data.user_id,
+    bot_logger.debug(
+        "Bot started: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
-        chat_id=chat_data.chat_id, text=f"you said: '{chat_data.text}'"
+        chat_id=chat_data.chat_id,
+        text="Welcome to the WazobiaCode Bootcamp Bot! I'm here to assist you with your registration and provide access to course materials. To get started, use /register to link your Telegram account. If you need any help, just type /help for a list of available commands.",
     )
 
 
@@ -64,9 +65,10 @@ Available commands:
 For any issues or questions, please contact support.
     """
 
-    logger.debug(
-        "Help command requested: {user_id=}",
-        user_id=chat_data.user_id,
+    bot_logger.debug(
+        "Help command requested: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(chat_id=chat_data.chat_id, text=help_text)
@@ -75,10 +77,11 @@ For any issues or questions, please contact support.
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_data = _get_chat_data(update)
 
-    logger.debug(
+    bot_logger.debug(
         "Unknown command: {text=}",
         text=chat_data.text,
-        user_id=chat_data.user_id,
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
         chat_id=chat_data.chat_id,
     )
     await context.bot.send_message(
@@ -102,12 +105,11 @@ async def register_user(
     keyboard = [[KeyboardButton("Share Phone Number", request_contact=True)]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
-    # TODO: need to talk to website API, handle errors, already registered, etc.
-
     try:
-        logger.debug(
-            "Sending registration message: {user_id=}",
-            user_id=chat_data.user_id,
+        bot_logger.debug(
+            "Sending registration message: {sender=}",
+            sender=chat_data.sender,
+            sent_by=chat_data.sent_by,
             chat_id=chat_data.chat_id,
         )
         await update.message.reply_text(
@@ -127,10 +129,11 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
                 parse_mode="HTML",
             )
         else:
-            logger.error(
+            bot_logger.error(
                 "Error responding to registration command: {error=}",
                 error=str(e),
-                user_id=chat_data.user_id,
+                sender=chat_data.sender,
+                sent_by=chat_data.sent_by,
                 chat_id=chat_data.chat_id,
             )
 
@@ -140,18 +143,28 @@ Please reach out to <a href="{settings.BOT_URL}">{settings.BOT_AT}</a>
 async def receive_phone(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> RegistrationStates:
-    user = update.message.from_user
+    chat_data = _get_chat_data(update)
     phone_number = update.message.contact.phone_number
 
-    logger.debug(
-        "Received phone number: {user_id=}",
+    await update.message.reply_text("Thank you! Please wait...")
+
+    res = await web_client.register_user(phone_number, chat_data.sender)
+
+    if res.error:
+        await update.message.reply_text(
+            f"An error occurred while registering your telegram account: {res.error}",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return ConversationHandler.END
+
+    bot_logger.debug(
+        "Received phone number: {sender=}",
         phone_number=phone_number,
-        user_id=user.id,
-        chat_id=update.effective_chat.id,
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
+        chat_id=chat_data.chat_id,
     )
-    await update.message.reply_text(
-        f"Thank you, {user.full_name}! Your telegram account has been registered successfully."
-    )
+    await update.message.reply_text(res.message, reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 
@@ -159,10 +172,13 @@ async def receive_phone(
 async def cancel_registration(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> RegistrationStates:
-    logger.debug(
-        "Cancelling registration: {user_id=}",
-        user_id=update.message.from_user.id,
-        chat_id=update.effective_chat.id,
+    chat_data = _get_chat_data(update)
+
+    bot_logger.debug(
+        "Cancelling registration: {sender=}",
+        sender=chat_data.sender,
+        sent_by=chat_data.sent_by,
+        chat_id=chat_data.chat_id,
     )
     await update.message.reply_text(
         "Registration cancelled. You can start over by using the /register command.",
