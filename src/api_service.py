@@ -52,4 +52,5 @@ async def send_invite(invite: InviteRequest, api_key: str = Depends(get_api_key)
         return {"status": "success", "message": "Invite sent successfully"}
     except Exception as e:
         logger.error("Error sending invite: {error=}", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        #raise HTTPException(status_code=500, detail=str(e))
+        await bot.send_message(chat_id=invite.user_id, text="Invite has failed please refer to the website and follow the instructions or contact us at wazobiacode@gmail.com")
