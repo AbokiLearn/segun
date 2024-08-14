@@ -90,6 +90,14 @@ async def send_invites(invite_batch: InviteBatch, api_key: str = Depends(get_api
     except Exception as e:
         logger.error("Error sending invites: {error=}", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+        await bot.send_message(
+            chat_id=invite.user_id, 
+            text="""\
+Unfortunately, we weren't able to generate your invite. Please make sure you've followed all the instructions on our website here: wazobiacode.com/faq, then try again.
+
+If you still do not receive an invite, please reach out to us via email here wazobiacode@gmail.com.
+"""
+        )
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
